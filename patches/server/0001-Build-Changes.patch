@@ -2073,7 +2073,7 @@ index c78cbec447032de9fe69748591bef6be300160ed..e74c54398373fb1f17ab719dbc63d72b
      public FullChunkStatus status;
  
 diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java
-index dbc86b8d4d2af6e5f7e678f2bb77fd39b85c04c5..42ea1dcb10a2586a4eb4ee7b049a07705bbe4017 100644
+index 3751c2a077bd13bac330b93c6efc2a640a17f4f2..af179516303580237239d7cae86d78bb879292d5 100644
 --- a/src/main/java/net/minecraft/server/MinecraftServer.java
 +++ b/src/main/java/net/minecraft/server/MinecraftServer.java
 @@ -276,7 +276,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
@@ -2122,7 +2122,7 @@ index dbc86b8d4d2af6e5f7e678f2bb77fd39b85c04c5..42ea1dcb10a2586a4eb4ee7b049a0770
 +            }
 +            // ASWM END
  
-             String worldType = (dimension == -999) ? dimensionKey.location().getNamespace() + "_" + dimensionKey.location().getPath() : org.bukkit.World.Environment.getEnvironment(dimension).toString().toLowerCase();
+             String worldType = (dimension == -999) ? dimensionKey.location().getNamespace() + "_" + dimensionKey.location().getPath() : org.bukkit.World.Environment.getEnvironment(dimension).toString().toLowerCase(Locale.ROOT);
              String name = (dimensionKey == LevelStem.OVERWORLD) ? s : s + "_" + worldType;
 -            if (dimension != 0) {
 +            if(dimension != 0) {
@@ -2175,7 +2175,7 @@ index dbc86b8d4d2af6e5f7e678f2bb77fd39b85c04c5..42ea1dcb10a2586a4eb4ee7b049a0770
                  }
              }
 diff --git a/src/main/java/net/minecraft/server/level/ServerChunkCache.java b/src/main/java/net/minecraft/server/level/ServerChunkCache.java
-index b99f50604bafecbc68835974c9ed0caa91911a40..d3fdc1f72b02508e0f2126e3f995d41611169740 100644
+index fcecfda569d2a8d6b8a7e228831f822fb7327748..8ff179ceadcc7b1740631cd46979864899d85b7d 100644
 --- a/src/main/java/net/minecraft/server/level/ServerChunkCache.java
 +++ b/src/main/java/net/minecraft/server/level/ServerChunkCache.java
 @@ -75,7 +75,11 @@ public class ServerChunkCache extends ChunkSource {
