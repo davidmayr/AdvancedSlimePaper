@@ -1,0 +1,120 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: David Mayr <davidliebtkekse@gmail.com>
+Date: Mon, 10 Mar 2025 20:19:52 +0100
+Subject: [PATCH] feat: moonrise attempt
+
+
+diff --git a/ca/spottedleaf/moonrise/patches/chunk_system/io/datacontroller/ChunkDataController.java b/ca/spottedleaf/moonrise/patches/chunk_system/io/datacontroller/ChunkDataController.java
+index a36ab89f5c37f5f9ab0152f087bb4cf3560f8581..8dd9e6bcf4445d447955f33d58257aef6c0f3584 100644
+--- a/ca/spottedleaf/moonrise/patches/chunk_system/io/datacontroller/ChunkDataController.java
++++ b/ca/spottedleaf/moonrise/patches/chunk_system/io/datacontroller/ChunkDataController.java
+@@ -13,7 +13,7 @@ import java.io.IOException;
+ import java.util.concurrent.CompletableFuture;
+ import java.util.concurrent.CompletionException;
+ 
+-public final class ChunkDataController extends MoonriseRegionFileIO.RegionDataController {
++public class ChunkDataController extends MoonriseRegionFileIO.RegionDataController {
+ 
+     private final ServerLevel world;
+ 
+diff --git a/ca/spottedleaf/moonrise/patches/chunk_system/io/datacontroller/EntityDataController.java b/ca/spottedleaf/moonrise/patches/chunk_system/io/datacontroller/EntityDataController.java
+index 828c868f68c2a20bf90d0f7ec253fdeb591f15f6..776ccc6104ee66ba0adb1edabfbe985a068c3480 100644
+--- a/ca/spottedleaf/moonrise/patches/chunk_system/io/datacontroller/EntityDataController.java
++++ b/ca/spottedleaf/moonrise/patches/chunk_system/io/datacontroller/EntityDataController.java
+@@ -11,7 +11,7 @@ import net.minecraft.world.level.chunk.storage.RegionStorageInfo;
+ import java.io.IOException;
+ import java.nio.file.Path;
+ 
+-public final class EntityDataController extends MoonriseRegionFileIO.RegionDataController {
++public class EntityDataController extends MoonriseRegionFileIO.RegionDataController {
+ 
+     private final EntityRegionFileStorage storage;
+ 
+diff --git a/ca/spottedleaf/moonrise/patches/chunk_system/io/datacontroller/PoiDataController.java b/ca/spottedleaf/moonrise/patches/chunk_system/io/datacontroller/PoiDataController.java
+index bd0d782852f9cfe5bc0b5339ecf4d82c10332ec9..54bf260d90419e964241ea590b1635ca858cac1c 100644
+--- a/ca/spottedleaf/moonrise/patches/chunk_system/io/datacontroller/PoiDataController.java
++++ b/ca/spottedleaf/moonrise/patches/chunk_system/io/datacontroller/PoiDataController.java
+@@ -9,7 +9,7 @@ import net.minecraft.server.level.ServerLevel;
+ import net.minecraft.world.level.chunk.storage.RegionFileStorage;
+ import java.io.IOException;
+ 
+-public final class PoiDataController extends MoonriseRegionFileIO.RegionDataController {
++public class PoiDataController extends MoonriseRegionFileIO.RegionDataController {
+ 
+     private final ServerLevel world;
+ 
+diff --git a/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/task/ChunkLoadTask.java b/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/task/ChunkLoadTask.java
+index 21b69acaf19049210b475bba2f1d86e986efb5b0..2f188f858790562d7881ed64034ca903ed5246be 100644
+--- a/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/task/ChunkLoadTask.java
++++ b/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/task/ChunkLoadTask.java
+@@ -46,18 +46,18 @@ public final class ChunkLoadTask extends ChunkProgressionTask {
+         super(scheduler, world, chunkX, chunkZ);
+         this.chunkHolder = chunkHolder;
+         // ASWM start
+-        if (world instanceof com.infernalsuite.asp.level.SlimeLevelInstance levelInstance) {
+-
+-            this.loadTask = levelInstance.getLoadTask(this, scheduler, world, chunkX, chunkZ, priority, result -> {
+-                ChunkLoadTask.this.complete(result == null ? null : result.left(), result == null ? null : result.right());
+-            });
+-        } else {
++//        if (world instanceof com.infernalsuite.asp.level.SlimeLevelInstance levelInstance) {
++//
++//            this.loadTask = levelInstance.getLoadTask(this, scheduler, world, chunkX, chunkZ, priority, result -> {
++//                ChunkLoadTask.this.complete(result == null ? null : result.left(), result == null ? null : result.right());
++//            });
++//        } else {
+             ChunkDataLoadTask task = new ChunkDataLoadTask(scheduler, world, chunkX, chunkZ, priority);
+             task.addCallback((final GenericDataLoadTask.TaskResult<ChunkAccess, Throwable> result) -> {
+                 ChunkLoadTask.this.complete(result == null ? null : result.left(), result == null ? null : result.right());
+             });
+             this.loadTask = task;
+-        }
++//        }
+         // ASWM end
+     }
+ 
+diff --git a/net/minecraft/server/level/ServerLevel.java b/net/minecraft/server/level/ServerLevel.java
+index 60608cea4e564c1ce47f8a4de2c1a48986bbdecb..90ba8592b48666c51f4967ebc77209ecdf5a05c7 100644
+--- a/net/minecraft/server/level/ServerLevel.java
++++ b/net/minecraft/server/level/ServerLevel.java
+@@ -291,10 +291,10 @@ public class ServerLevel extends Level implements ServerEntityGetter, WorldGenLe
+     // Paper start - rewrite chunk system
+     private final ca.spottedleaf.moonrise.patches.chunk_system.player.RegionizedPlayerChunkLoader.ViewDistanceHolder viewDistanceHolder = new ca.spottedleaf.moonrise.patches.chunk_system.player.RegionizedPlayerChunkLoader.ViewDistanceHolder();
+     private final ca.spottedleaf.moonrise.patches.chunk_system.player.RegionizedPlayerChunkLoader chunkLoader = new ca.spottedleaf.moonrise.patches.chunk_system.player.RegionizedPlayerChunkLoader((ServerLevel)(Object)this);
+-    private final ca.spottedleaf.moonrise.patches.chunk_system.io.datacontroller.EntityDataController entityDataController;
+-    private final ca.spottedleaf.moonrise.patches.chunk_system.io.datacontroller.PoiDataController poiDataController;
+-    private final ca.spottedleaf.moonrise.patches.chunk_system.io.datacontroller.ChunkDataController chunkDataController;
+-    private final ca.spottedleaf.moonrise.patches.chunk_system.scheduling.ChunkTaskScheduler chunkTaskScheduler;
++    protected ca.spottedleaf.moonrise.patches.chunk_system.io.datacontroller.EntityDataController entityDataController;
++    protected ca.spottedleaf.moonrise.patches.chunk_system.io.datacontroller.PoiDataController poiDataController;
++    protected ca.spottedleaf.moonrise.patches.chunk_system.io.datacontroller.ChunkDataController chunkDataController;
++    protected final ca.spottedleaf.moonrise.patches.chunk_system.scheduling.ChunkTaskScheduler chunkTaskScheduler;
+     private long lastMidTickFailure;
+     private long tickedBlocksOrFluids;
+     private final ca.spottedleaf.moonrise.common.misc.NearbyPlayers nearbyPlayers = new ca.spottedleaf.moonrise.common.misc.NearbyPlayers((ServerLevel)(Object)this);
+@@ -570,7 +570,7 @@ public class ServerLevel extends Level implements ServerEntityGetter, WorldGenLe
+     }
+     // Paper end - chunk tick iteration
+ 
+-    public com.infernalsuite.asp.level.SlimeInMemoryWorld slimeInstance; // ASP
++    public com.infernalsuite.asp.moonrise.WSlimeInMemoryWorld slimeInstance; // ASP
+ 
+     public ServerLevel(
+             MinecraftServer server,
+diff --git a/net/minecraft/world/level/chunk/storage/SerializableChunkData.java b/net/minecraft/world/level/chunk/storage/SerializableChunkData.java
+index 1ab67bd571ec706636a9e2bd8003b8104294cdd6..c2bef4ea9aed48f6b07e1cd120647f5e77ed81b2 100644
+--- a/net/minecraft/world/level/chunk/storage/SerializableChunkData.java
++++ b/net/minecraft/world/level/chunk/storage/SerializableChunkData.java
+@@ -389,9 +389,9 @@ public record SerializableChunkData(
+                 }
+ 
+                 //ASP start
+-                if (level instanceof com.infernalsuite.asp.level.SlimeLevelInstance) {
+-                    poiManager.checkConsistencyWithBlocks(sectionPos, sectionData.chunkSection);
+-                }
++//                if (level instanceof com.infernalsuite.asp.level.SlimeLevelInstance) {
++//                    poiManager.checkConsistencyWithBlocks(sectionPos, sectionData.chunkSection);
++//                }
+                 //ASP end
+             }
+         }
