@@ -11,7 +11,9 @@ import com.infernalsuite.asp.api.world.SlimeChunk;
 import com.infernalsuite.asp.api.world.SlimeChunkSection;
 import com.infernalsuite.asp.serialization.slime.ChunkPruner;
 import com.infernalsuite.asp.skeleton.SlimeChunkSectionSkeleton;
+import net.kyori.adventure.nbt.BinaryTagIO;
 import net.kyori.adventure.nbt.CompoundBinaryTag;
+import net.kyori.adventure.nbt.TagStringIO;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -55,20 +57,28 @@ public class SlimeRegionDataController extends ChunkDataController {
         for (int i = 0; i < sections.size(); i++) {
             CompoundTag sectionTag = sections.getCompound(i);
 
+            int lightSIze = 2048;
+
             NibbleArray skyLight;
-            if(sectionTag.contains("SkyLight")) {
+            if(sectionTag.contains("SkyLight") && sectionTag.getByteArray("SkyLight").length == lightSIze) {
                 skyLight = new NibbleArray(sectionTag.getByteArray("SkyLight"));
             } else {
                 skyLight = new NibbleArray(2048);
             }
 
             NibbleArray blockLight;
-            if(sectionTag.contains("BlockLight")) {
+            if(sectionTag.contains("BlockLight") && sectionTag.getByteArray("BlockLight").length == lightSIze) {
                 blockLight = new NibbleArray(sectionTag.getByteArray("BlockLight"));
             } else {
                 blockLight = new NibbleArray(2048);
             }
 
+            try {
+                System.out.println(TagStringIO.get().asString(Converter.convertTag(sectionTag.getCompound("block_states"))));
+                System.out.println(TagStringIO.get().asString(Converter.convertTag(sectionTag.getCompound("biomes"))));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
             sectionSkeletons[i] = new SlimeChunkSectionSkeleton(
                     Converter.convertTag(sectionTag.getCompound("block_states")),
                     Converter.convertTag(sectionTag.getCompound("biomes")),

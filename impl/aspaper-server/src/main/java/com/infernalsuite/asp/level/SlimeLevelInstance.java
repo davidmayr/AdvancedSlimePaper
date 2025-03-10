@@ -13,6 +13,7 @@ import com.infernalsuite.asp.api.world.SlimeWorld;
 import com.infernalsuite.asp.api.world.SlimeWorldInstance;
 import com.infernalsuite.asp.api.world.properties.SlimeProperties;
 import com.infernalsuite.asp.api.world.properties.SlimePropertyMap;
+import com.infernalsuite.asp.skeleton.SkeletonCloning;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
@@ -184,7 +185,7 @@ public class SlimeLevelInstance extends ServerLevel {
             Bukkit.getLogger().log(Level.INFO, "Saving world " + this.slimeInstance.getName() + "...");
             long start = System.currentTimeMillis();
 
-            SlimeWorld world = this.slimeInstance;
+            SlimeWorld world = SkeletonCloning.fullClone(slimeWorld.getName(), slimeWorld, slimeWorld.getLoader());
             return WORLD_SAVER_SERVICE.submit(() -> {
                 try {
                     byte[] serializedWorld = SlimeSerializer.serialize(world);

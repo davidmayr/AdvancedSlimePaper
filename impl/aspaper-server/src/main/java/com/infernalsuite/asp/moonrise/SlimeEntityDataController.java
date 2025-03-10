@@ -30,6 +30,9 @@ public class SlimeEntityDataController extends EntityDataController {
 
     @Override
     public WriteData startWrite(int chunkX, int chunkZ, CompoundTag compound) {
+        if(compound == null) {
+            return new WriteData(null, WriteData.WriteResult.DELETE, null, null);
+        }
         if(ChunkPruner.shouldPruneAtAllCost(slimeWorld, chunkX, chunkZ) || compound.getList("Entities", Tag.TAG_COMPOUND).isEmpty()) {
             return new WriteData(null, WriteData.WriteResult.DELETE, null, null);
         }

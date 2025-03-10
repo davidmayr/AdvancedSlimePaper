@@ -55,22 +55,28 @@ public class AdvancedSlimePaper implements AdvancedSlimePaperAPI {
         Objects.requireNonNull(worldName, "World name cannot be null");
         Objects.requireNonNull(propertyMap, "Properties cannot be null");
 
-        long start = System.currentTimeMillis();
 
-        LOGGER.info("Reading world {}.", worldName);
-        byte[] serializedWorld = loader.readWorld(worldName);
+        try {
+            long start = System.currentTimeMillis();
 
-        SlimeWorld slimeWorld = SlimeWorldReaderRegistry.readWorld(loader, worldName, serializedWorld, propertyMap, readOnly);
-        LOGGER.info("Applying datafixers for {}.", worldName);
-        SlimeWorld dataFixed = SlimeNMSBridge.instance().applyDataFixers(slimeWorld);
+            LOGGER.info("Reading world {}.", worldName);
+            byte[] serializedWorld = loader.readWorld(worldName);
 
-        // If the dataFixed and slimeWorld are same, then no datafixers were applied
-        if (!readOnly && dataFixed != slimeWorld)
-            loader.saveWorld(worldName, SlimeSerializer.serialize(dataFixed)); // Write dataFixed world back to loader
+            SlimeWorld slimeWorld = SlimeWorldReaderRegistry.readWorld(loader, worldName, serializedWorld, propertyMap, readOnly);
+            LOGGER.info("Applying datafixers for {}.", worldName);
+            SlimeWorld dataFixed = SlimeNMSBridge.instance().applyDataFixers(slimeWorld);
 
-        LOGGER.info("World {} read in {}ms.", worldName, System.currentTimeMillis() - start);
+            // If the dataFixed and slimeWorld are same, then no datafixers were applied
+            if (!readOnly && dataFixed != slimeWorld)
+                loader.saveWorld(worldName, SlimeSerializer.serialize(dataFixed)); // Write dataFixed world back to loader
 
-        return dataFixed;
+            LOGGER.info("World {} read in {}ms.", worldName, System.currentTimeMillis() - start);
+
+            return dataFixed;
+        } catch (Throwable e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     @Override
