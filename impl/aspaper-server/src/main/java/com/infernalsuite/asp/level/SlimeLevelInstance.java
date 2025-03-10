@@ -1,18 +1,18 @@
 package com.infernalsuite.asp.level;
 
 import ca.spottedleaf.concurrentutil.util.Priority;
+import ca.spottedleaf.moonrise.patches.chunk_system.io.MoonriseRegionFileIO;
+import ca.spottedleaf.moonrise.patches.chunk_system.io.datacontroller.PoiDataController;
 import ca.spottedleaf.moonrise.patches.chunk_system.scheduling.ChunkTaskScheduler;
 import ca.spottedleaf.moonrise.patches.chunk_system.scheduling.task.ChunkLoadTask;
 import ca.spottedleaf.moonrise.patches.chunk_system.scheduling.task.GenericDataLoadTask;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.infernalsuite.asp.Converter;
+import com.infernalsuite.asp.moonrise.*;
 import com.infernalsuite.asp.serialization.slime.SlimeSerializer;
-import com.infernalsuite.asp.api.world.SlimeChunk;
 import com.infernalsuite.asp.api.world.SlimeWorld;
 import com.infernalsuite.asp.api.world.SlimeWorldInstance;
 import com.infernalsuite.asp.api.world.properties.SlimeProperties;
 import com.infernalsuite.asp.api.world.properties.SlimePropertyMap;
-import com.infernalsuite.asp.serialization.slime.SlimeSerializer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
@@ -25,12 +25,11 @@ import net.minecraft.util.ProgressListener;
 import net.minecraft.util.Unit;
 import net.minecraft.util.datafix.DataFixers;
 import net.minecraft.world.Difficulty;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.chunk.storage.RegionStorageInfo;
 import net.minecraft.world.level.dimension.LevelStem;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import net.minecraft.world.level.storage.PrimaryLevelData;
@@ -48,7 +47,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -57,7 +55,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.function.Consumer;
 import java.util.logging.Level;
-import java.util.stream.Collectors;
 
 public class SlimeLevelInstance extends ServerLevel {
 
@@ -93,7 +90,7 @@ public class SlimeLevelInstance extends ServerLevel {
                 primaryLevelData, worldKey, worldDimension,
                 MinecraftServer.getServer().progressListenerFactory.create(11), false, 0,
                 Collections.emptyList(), true, null, environment, null, null);
-        this.slimeInstance = new SlimeInMemoryWorld(slimeBootstrap, this);
+        this.slimeInstance = new WSlimeInMemoryWorld(slimeBootstrap, this);
 
 
         SlimePropertyMap propertyMap = slimeBootstrap.initial().getPropertyMap();
@@ -107,6 +104,17 @@ public class SlimeLevelInstance extends ServerLevel {
         super.setSpawnSettings(propertyMap.getValue(SlimeProperties.ALLOW_MONSTERS));
 
         this.pvpMode = propertyMap.getValue(SlimeProperties.PVP);
+        this.entityDataController = new SlimeEntityDataController(
+                new ca.spottedleaf.moonrise.patches.chunk_system.io.datacontroller.EntityDataController.EntityRegionFileStorage(
+                        new RegionStorageInfo(levelStorageAccess.getLevelId(), worldKey, "entities"),
+                        levelStorageAccess.getDimensionPath(worldKey).resolve("entities"),
+                        MinecraftServer.getServer().forceSynchronousWrites()
+                ),
+                this.chunkTaskScheduler,
+                slimeInstance
+        );
+        this.poiDataController = new SlimePoiDataController((ServerLevel)(Object)this, this.chunkTaskScheduler, slimeInstance);
+        this.chunkDataController = new SlimeRegionDataController((ServerLevel)(Object)this, this.chunkTaskScheduler, slimeInstance);
     }
 
     @Override
@@ -119,7 +127,11 @@ public class SlimeLevelInstance extends ServerLevel {
 
     @Override
     public void save(@Nullable ProgressListener progressUpdate, boolean forceSave, boolean savingDisabled, boolean close) {
-        if (!savingDisabled) save();
+        super.save(progressUpdate, forceSave, savingDisabled, close);
+
+        if(forceSave || close) {
+            save();
+        }
     }
 
     @Override
@@ -168,11 +180,11 @@ public class SlimeLevelInstance extends ServerLevel {
 
     private Future<?> saveInternal() {
         synchronized (saveLock) { // Don't want to save the SlimeWorld from multiple threads simultaneously
-            SlimeWorldInstance slimeWorld = this.slimeInstance;
+            WritableSlimeWorld slimeWorld = this.slimeInstance;
             Bukkit.getLogger().log(Level.INFO, "Saving world " + this.slimeInstance.getName() + "...");
             long start = System.currentTimeMillis();
 
-            SlimeWorld world = this.slimeInstance.getForSerialization();
+            SlimeWorld world = this.slimeInstance;
             return WORLD_SAVER_SERVICE.submit(() -> {
                 try {
                     byte[] serializedWorld = SlimeSerializer.serialize(world);
@@ -187,13 +199,13 @@ public class SlimeLevelInstance extends ServerLevel {
         }
     }
 
-    public SlimeWorldInstance getSlimeInstance() {
+    public WSlimeInMemoryWorld getSlimeInstance() {
         return this.slimeInstance;
     }
 
-    public ChunkDataLoadTask getLoadTask(ChunkLoadTask task, ChunkTaskScheduler scheduler, ServerLevel world, int chunkX, int chunkZ, Priority priority, Consumer<GenericDataLoadTask.TaskResult<ChunkAccess, Throwable>> onRun) {
-        return new ChunkDataLoadTask(task, scheduler, world, chunkX, chunkZ, priority, onRun);
-    }
+//    public ChunkDataLoadTask getLoadTask(ChunkLoadTask task, ChunkTaskScheduler scheduler, ServerLevel world, int chunkX, int chunkZ, Priority priority, Consumer<GenericDataLoadTask.TaskResult<ChunkAccess, Throwable>> onRun) {
+//        return new ChunkDataLoadTask(task, scheduler, world, chunkX, chunkZ, priority, onRun);
+//    }
 
     /*
     public void loadEntities(int chunkX, int chunkZ) {
@@ -221,7 +233,7 @@ public class SlimeLevelInstance extends ServerLevel {
     }
 
     public void onChunkUnloaded(LevelChunk chunk, ca.spottedleaf.moonrise.patches.chunk_system.level.entity.ChunkEntitySlices entityChunk) {
-        this.slimeInstance.unload(chunk, entityChunk);
+//        this.slimeInstance.unload(chunk, entityChunk);
     }
 
     public void deleteTempFiles() {

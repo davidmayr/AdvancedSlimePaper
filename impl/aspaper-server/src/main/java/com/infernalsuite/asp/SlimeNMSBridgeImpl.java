@@ -8,8 +8,9 @@ import com.infernalsuite.asp.api.world.SlimeWorld;
 import com.infernalsuite.asp.api.world.SlimeWorldInstance;
 import com.infernalsuite.asp.api.world.properties.SlimeProperties;
 import com.infernalsuite.asp.level.SlimeBootstrap;
-import com.infernalsuite.asp.level.SlimeInMemoryWorld;
+//import com.infernalsuite.asp.level.SlimeInMemoryWorld;
 import com.infernalsuite.asp.level.SlimeLevelInstance;
+import com.infernalsuite.asp.moonrise.WSlimeInMemoryWorld;
 import com.mojang.serialization.Lifecycle;
 import net.kyori.adventure.nbt.CompoundBinaryTag;
 import net.minecraft.SharedConstants;
@@ -93,7 +94,7 @@ public class SlimeNMSBridgeImpl implements SlimeNMSBridge {
 
         // See MinecraftServer loading logic
         // Some stuff is needed when loading overworld world
-        SlimeLevelInstance instance = ((SlimeInMemoryWorld) this.loadInstance(defaultWorld, Level.OVERWORLD)).getInstance();
+        SlimeLevelInstance instance = ((WSlimeInMemoryWorld) this.loadInstance(defaultWorld, Level.OVERWORLD)).getInstance();
         DimensionDataStorage worldpersistentdata = instance.getDataStorage();
         instance.getCraftServer().scoreboardManager = new org.bukkit.craftbukkit.scoreboard.CraftScoreboardManager(instance.getServer(), instance.getScoreboard());
         instance.getServer().commandStorage = new CommandStorage(worldpersistentdata);

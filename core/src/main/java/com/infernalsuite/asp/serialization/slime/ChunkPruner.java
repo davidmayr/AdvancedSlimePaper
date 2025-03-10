@@ -14,6 +14,17 @@ import java.util.List;
 public class ChunkPruner {
 
     public static boolean canBePruned(SlimeWorld world, SlimeChunk chunk) {
+        if(shouldPruneAtAllCost(world, chunk.getX(), chunk.getZ())) return true;
+
+        String pruningSetting = world.getPropertyMap().getValue(SlimeProperties.CHUNK_PRUNING);
+        if (pruningSetting.equals("aggressive")) {
+            return chunk.getTileEntities().isEmpty() && chunk.getEntities().isEmpty() && areSectionsEmpty(chunk.getSections());
+        }
+
+        return false;
+    }
+
+    public static boolean shouldPruneAtAllCost(SlimeWorld world, int chunkX, int chunkZ) {
         SlimePropertyMap propertyMap = world.getPropertyMap();
         if (propertyMap.getValue(SlimeProperties.SHOULD_LIMIT_SAVE)) {
             int minX = propertyMap.getValue(SlimeProperties.SAVE_MIN_X);
@@ -22,23 +33,13 @@ public class ChunkPruner {
             int minZ = propertyMap.getValue(SlimeProperties.SAVE_MIN_Z);
             int maxZ = propertyMap.getValue(SlimeProperties.SAVE_MAX_Z);
 
-            int chunkX = chunk.getX();
-            int chunkZ = chunk.getZ();
 
             if (chunkX < minX || chunkX > maxX) {
                 return true;
             }
 
-            if (chunkZ < minZ || chunkZ > maxZ) {
-                return true;
-            }
+            return chunkZ < minZ || chunkZ > maxZ;
         }
-
-        String pruningSetting = world.getPropertyMap().getValue(SlimeProperties.CHUNK_PRUNING);
-        if (pruningSetting.equals("aggressive")) {
-            return chunk.getTileEntities().isEmpty() && chunk.getEntities().isEmpty() && areSectionsEmpty(chunk.getSections());
-        }
-
         return false;
     }
 
