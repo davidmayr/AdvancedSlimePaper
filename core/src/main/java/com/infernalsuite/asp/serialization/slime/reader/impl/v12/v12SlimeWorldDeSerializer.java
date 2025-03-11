@@ -101,6 +101,8 @@ public class v12SlimeWorldDeSerializer implements com.infernalsuite.asp.serializ
                 chunkData.read(biomeData);
                 CompoundBinaryTag biomeTag = readCompound(biomeData);
 
+                if(sectionId >= sectionAmount)
+                    continue;
                 chunkSections[sectionId] = new com.infernalsuite.asp.skeleton.SlimeChunkSectionSkeleton(blockStateTag, biomeTag, blockLightArray, skyLightArray);
             }
 

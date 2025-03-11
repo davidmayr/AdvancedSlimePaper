@@ -11,4 +11,7 @@ public interface WriteableSlimeChunk extends SlimeChunk {
     void setSections(SlimeChunkSection[] sections);
     void setTileEntities(List<CompoundBinaryTag> objects);
     void setHeightmaps(CompoundBinaryTag heightmaps);
+
+    void setHasSectionData(boolean state);
+    boolean hasSectionData();
 }

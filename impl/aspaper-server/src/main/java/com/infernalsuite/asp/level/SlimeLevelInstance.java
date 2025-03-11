@@ -77,7 +77,6 @@ public class SlimeLevelInstance extends ServerLevel {
 
     private static final ExecutorService WORLD_SAVER_SERVICE = Executors.newFixedThreadPool(4, new ThreadFactoryBuilder()
             .setNameFormat("SWM Pool Thread #%1$d").build());
-    private static final TicketType<Unit> SWM_TICKET = TicketType.create("swm-chunk", (a, b) -> 0);
 
     private final Object saveLock = new Object();
 
@@ -126,13 +125,27 @@ public class SlimeLevelInstance extends ServerLevel {
         return new SlimeLevelGenerator(defaultBiome);
     }
 
-    @Override
-    public void save(@Nullable ProgressListener progressUpdate, boolean forceSave, boolean savingDisabled, boolean close) {
-        super.save(progressUpdate, forceSave, savingDisabled, close);
 
-        if(forceSave || close) {
+    @Override
+    public void save(@Nullable ProgressListener progress, boolean flush, boolean skipSave, boolean close) {
+        if(!skipSave || close) {
+            long start = System.currentTimeMillis();
+            if (!close) { chunkSource.save(flush); } // Paper - add close param
+            System.out.println(System.currentTimeMillis() - start + "ms for flushing chunks");
             save();
         }
+
+        // Paper start - add close param
+        if (close) {
+            try {
+                long start = System.currentTimeMillis();
+                chunkSource.close(!skipSave);
+                System.out.println(System.currentTimeMillis() - start + "ms for closing chunk source");
+            } catch (IOException never) {
+                throw new RuntimeException(never);
+            }
+        }
+        // Paper end - add close param
     }
 
     @Override
@@ -149,13 +162,8 @@ public class SlimeLevelInstance extends ServerLevel {
             if (!this.slimeInstance.isReadOnly() && this.slimeInstance.getLoader() != null) {
                 Bukkit.getPluginManager().callEvent(new WorldSaveEvent(getWorld()));
 
-                //this.getChunkSource().save(forceSave);
                 this.serverLevelData.setWorldBorder(this.getWorldBorder().createSettings());
                 this.serverLevelData.setCustomBossEvents(MinecraftServer.getServer().getCustomBossEvents().save(MinecraftServer.getServer().registryAccess()));
-
-                // Update level data
-//                net.minecraft.nbt.CompoundTag compound = new net.minecraft.nbt.CompoundTag();
-//                net.minecraft.nbt.CompoundTag nbtTagCompound = this.serverLevelData.createTag(MinecraftServer.getServer().registryAccess(), compound);
 
                 if (MinecraftServer.getServer().isStopped()) { // Make sure the world gets saved before stopping the server by running it from the main thread
                     saveInternal().get(); // Async wait for it to finish
@@ -170,14 +178,6 @@ public class SlimeLevelInstance extends ServerLevel {
         }
         return CompletableFuture.completedFuture(null);
     }
-
-    /*
-    @Override
-    public void saveIncrementally(boolean doFull) {
-        if (doFull) {
-            this.save(null, false, false);
-        }
-    }*/ // Most likely unused - kyngs
 
     private Future<?> saveInternal() {
         synchronized (saveLock) { // Don't want to save the SlimeWorld from multiple threads simultaneously
@@ -204,24 +204,6 @@ public class SlimeLevelInstance extends ServerLevel {
         return this.slimeInstance;
     }
 
-//    public ChunkDataLoadTask getLoadTask(ChunkLoadTask task, ChunkTaskScheduler scheduler, ServerLevel world, int chunkX, int chunkZ, Priority priority, Consumer<GenericDataLoadTask.TaskResult<ChunkAccess, Throwable>> onRun) {
-//        return new ChunkDataLoadTask(task, scheduler, world, chunkX, chunkZ, priority, onRun);
-//    }
-
-    /*
-    public void loadEntities(int chunkX, int chunkZ) {
-        SlimeChunk slimeChunk = this.slimeInstance.getChunk(chunkX, chunkZ);
-        if (slimeChunk != null) {
-            this.getEntityLookup().addLegacyChunkEntities(new ArrayList<>(
-                    EntityType.loadEntitiesRecursive(slimeChunk.getEntities()
-                                    .stream()
-                                    .map((tag) -> (net.minecraft.nbt.CompoundTag) Converter.convertTag(tag))
-                                    .collect(Collectors.toList()), this)
-                            .toList()
-            ), new ChunkPos(chunkX, chunkZ));
-        }
-    }*/ // Most likely unused - kyngs
-
     @Override
     public void setDefaultSpawnPos(BlockPos pos, float angle) {
         super.setDefaultSpawnPos(pos, angle);
@@ -233,13 +215,12 @@ public class SlimeLevelInstance extends ServerLevel {
         propertyMap.setValue(SlimeProperties.SPAWN_YAW, angle);
     }
 
-    public void onChunkUnloaded(LevelChunk chunk, ca.spottedleaf.moonrise.patches.chunk_system.level.entity.ChunkEntitySlices entityChunk) {
-//        this.slimeInstance.unload(chunk, entityChunk);
-    }
-
     public void deleteTempFiles() {
         WORLD_SAVER_SERVICE.execute(() -> {
             Path path = this.levelStorageAccess.levelDirectory.path();
+            System.out.println(path.toAbsolutePath().toString());
+            if(true) return;
+
             try {
                 // We do this manually and not use the deleteLevel function as it would cause a level deleted message
                 // to appear in the log which might be confusing for our users

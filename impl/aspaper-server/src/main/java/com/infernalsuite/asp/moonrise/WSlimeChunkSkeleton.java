@@ -66,6 +66,18 @@ public final class WSlimeChunkSkeleton implements WriteableSlimeChunk {
         this.heightMap = heightmaps;
     }
 
+    private boolean sectionData = true;
+
+    @Override
+    public void setHasSectionData(boolean state) {
+        sectionData = state;
+    }
+
+    @Override
+    public boolean hasSectionData() {
+        return sectionData;
+    }
+
     @Override
     public int getX() {
         return this.x;

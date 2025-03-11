@@ -39,6 +39,8 @@ public class UnloadWorldCmd extends SlimeCommand {
             CompletableFuture<Void> cf = CompletableFuture.allOf(players.stream().map(player -> player.teleportAsync(spawnLocation)).toList().toArray(CompletableFuture[]::new));
             cf.thenRun(() -> {
                 Bukkit.getScheduler().runTask(SWPlugin.getInstance(), () -> {
+                    long start = System.currentTimeMillis();
+
                     boolean success = Bukkit.unloadWorld(bukkitWorld, true);
 
                     if (!success) {
@@ -49,17 +51,19 @@ public class UnloadWorldCmd extends SlimeCommand {
                         sender.sendMessage(COMMAND_PREFIX.append(
                                 Component.text("World ").color(NamedTextColor.GREEN)
                                         .append(Component.text(slimeWorld.getName()).color(NamedTextColor.YELLOW))
-                                        .append(Component.text(" unloaded correctly.")).color(NamedTextColor.GREEN)
+                                        .append(Component.text(" unloaded correctly in " + (System.currentTimeMillis()-start) + "ms!")).color(NamedTextColor.GREEN)
                         ));
                     }
                 });
             });
         } else {
+            long start = System.currentTimeMillis();
+
             Bukkit.unloadWorld(bukkitWorld, true);
             sender.sendMessage(COMMAND_PREFIX.append(
                     Component.text("World ").color(NamedTextColor.GREEN)
                             .append(Component.text(slimeWorld.getName()).color(NamedTextColor.YELLOW))
-                            .append(Component.text(" unloaded correctly.")).color(NamedTextColor.GREEN)
+                            .append(Component.text(" unloaded correctly in " + (System.currentTimeMillis()-start) + "ms!")).color(NamedTextColor.GREEN)
             ));
         }
     }

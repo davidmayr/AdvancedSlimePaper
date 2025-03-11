@@ -59,8 +59,8 @@ public class SkeletonCloning {
                 NibbleArray skyLight = original.getSkyLight();
 
                 copied[i] = new SlimeChunkSectionSkeleton(
-                        original.getBlockStatesTag() == null ? null : CompoundBinaryTag.builder().put(original.getBlockStatesTag()).build(),
-                        original.getBiomeTag() == null ? null : CompoundBinaryTag.builder().put(original.getBiomeTag()).build(),
+                        original.getBlockStatesTag(), //Immutable
+                        original.getBiomeTag(), //Immutable
                         blockLight == null ? null : blockLight.clone(),
                         skyLight == null ? null : skyLight.clone()
                 );
@@ -71,10 +71,10 @@ public class SkeletonCloning {
                             chunk.getX(),
                             chunk.getZ(),
                             copied,
-                            CompoundBinaryTag.builder().put(chunk.getHeightMaps()).build(),
+                            chunk.getHeightMaps(), //Immutable
                             deepClone(chunk.getTileEntities()),
                             deepClone(chunk.getEntities()),
-                            CompoundBinaryTag.builder().put(chunk.getExtraData()).build(),
+                            chunk.getExtraData(), //Immutable
                             null
                     ));
         }
@@ -83,11 +83,6 @@ public class SkeletonCloning {
     }
 
     private static List<CompoundBinaryTag> deepClone(List<CompoundBinaryTag> tags) {
-        List<CompoundBinaryTag> cloned = new ArrayList<>(tags.size());
-        for (CompoundBinaryTag tag : tags) {
-            cloned.add(CompoundBinaryTag.builder().put(tag).build());
-        }
-
-        return cloned;
+        return new ArrayList<>(tags);
     }
 }

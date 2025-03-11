@@ -21,7 +21,7 @@ import java.util.List;
 
 public class SlimeEntityDataController extends EntityDataController {
 
-    private WritableSlimeWorld slimeWorld;
+    private final WritableSlimeWorld slimeWorld;
 
     public SlimeEntityDataController(EntityRegionFileStorage storage, ChunkTaskScheduler taskScheduler, WritableSlimeWorld slimeWorld) {
         super(storage, taskScheduler);
@@ -42,31 +42,33 @@ public class SlimeEntityDataController extends EntityDataController {
 
     @Override
     public void finishWrite(int chunkX, int chunkZ, WriteData writeData) {
-        if(writeData.result() == WriteData.WriteResult.DELETE) {
-            WriteableSlimeChunk slimeChunk = slimeWorld.getChunk(chunkX, chunkZ);
-            if(slimeChunk == null) return;
-            slimeChunk.setEntities(Collections.emptyList());
+        synchronized (slimeWorld) {
+            if(writeData.result() == WriteData.WriteResult.DELETE) {
+                WriteableSlimeChunk slimeChunk = slimeWorld.getChunk(chunkX, chunkZ);
+                if(slimeChunk == null) return;
+                slimeChunk.setEntities(Collections.emptyList());
 
-            if(ChunkPruner.canBePruned(slimeWorld, slimeChunk)) {
-                slimeWorld.deleteChunk(chunkX, chunkZ);
+                if(!slimeChunk.hasSectionData() && slimeChunk.getTileEntities().isEmpty()) {
+                    slimeWorld.deleteChunk(chunkX, chunkZ);
+                }
+                return;
             }
-            return;
-        }
-        WriteableSlimeChunk chunk = slimeWorld.getOrCreateChunk(chunkX, chunkZ);
-        ListTag entities = writeData.input().getList("Entities", Tag.TAG_COMPOUND);
+            WriteableSlimeChunk chunk = slimeWorld.getOrCreateChunk(chunkX, chunkZ);
+            ListTag entities = writeData.input().getList("Entities", Tag.TAG_COMPOUND);
 
-        List<CompoundBinaryTag> entitiesConverted = new ArrayList<>(entities.size());
-        for (Tag entity : entities) {
-            entitiesConverted.add(Converter.convertTag(entity));
-        }
+            List<CompoundBinaryTag> entitiesConverted = new ArrayList<>(entities.size());
+            for (Tag entity : entities) {
+                entitiesConverted.add(Converter.convertTag(entity));
+            }
 
-        chunk.setEntities(entitiesConverted);
+            chunk.setEntities(entitiesConverted);
+        }
     }
 
     @Override
     public ReadData readData(int chunkX, int chunkZ) {
         SlimeChunk chunk = slimeWorld.getChunk(chunkX, chunkZ);
-        if(chunk == null || true) return new ReadData(ReadData.ReadResult.NO_DATA, null, null);
+        if(chunk == null) return new ReadData(ReadData.ReadResult.NO_DATA, null, null);
 
         CompoundTag tag = new CompoundTag();
         tag.putIntArray("Position", new int[]{chunkX, chunkZ});
@@ -83,6 +85,6 @@ public class SlimeEntityDataController extends EntityDataController {
 
     @Override
     public CompoundTag finishRead(int chunkX, int chunkZ, ReadData readData) throws IOException {
-        return null;
+        return readData.syncRead();
     }
 }
