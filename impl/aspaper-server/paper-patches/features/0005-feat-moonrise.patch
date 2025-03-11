@@ -1,0 +1,26 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: David Mayr <davidliebtkekse@gmail.com>
+Date: Tue, 11 Mar 2025 22:35:19 +0100
+Subject: [PATCH] feat: moonrise
+
+
+diff --git a/src/main/java/org/bukkit/craftbukkit/CraftServer.java b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
+index 0bbc51dcf0ba7773b818994890d14fd0300608f3..d8da3e8facb5b2dc2794168490f4b1bea33f38c0 100644
+--- a/src/main/java/org/bukkit/craftbukkit/CraftServer.java
++++ b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
+@@ -1482,6 +1482,7 @@ public final class CraftServer implements Server {
+ 
+     @Override
+     public boolean unloadWorld(World world, boolean save) {
++        long start = System.currentTimeMillis();
+         //Preconditions.checkState(!this.console.isIteratingOverLevels, "Cannot unload a world while worlds are being ticked"); // Paper - Cat - Temp disable. We'll see how this goes.
+         if (world == null) {
+             return false;
+@@ -1530,6 +1531,7 @@ public final class CraftServer implements Server {
+ 
+         this.worlds.remove(world.getName().toLowerCase(Locale.ROOT));
+         this.console.removeLevel(handle);
++        System.out.println("Bukkit unload took " + (System.currentTimeMillis() - start) + " ms");
+         return true;
+     }
+ 
