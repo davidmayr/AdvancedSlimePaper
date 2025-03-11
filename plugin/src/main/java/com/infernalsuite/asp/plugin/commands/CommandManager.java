@@ -1,32 +1,49 @@
 package com.infernalsuite.asp.plugin.commands;
 
+import com.infernalsuite.asp.api.AdvancedSlimePaperAPI;
+import com.infernalsuite.asp.api.exceptions.CorruptedWorldException;
+import com.infernalsuite.asp.api.exceptions.NewerFormatException;
+import com.infernalsuite.asp.api.exceptions.UnknownWorldException;
+import com.infernalsuite.asp.api.world.SlimeChunk;
 import com.infernalsuite.asp.api.world.SlimeWorld;
+import com.infernalsuite.asp.api.world.properties.SlimePropertyMap;
+import com.infernalsuite.asp.plugin.SWPlugin;
 import com.infernalsuite.asp.plugin.commands.parser.*;
 import com.infernalsuite.asp.plugin.commands.sub.*;
 import io.leangen.geantyref.TypeToken;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.Bukkit;
+import org.bukkit.Chunk;
 import org.bukkit.World;
 import org.bukkit.command.CommandSender;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.incendo.cloud.annotations.AnnotationParser;
 import org.incendo.cloud.annotations.Command;
 import org.incendo.cloud.bukkit.CloudBukkitCapabilities;
 import org.incendo.cloud.component.DefaultValue;
+import org.incendo.cloud.context.CommandContext;
 import org.incendo.cloud.exception.ArgumentParseException;
 import org.incendo.cloud.exception.CommandExecutionException;
 import org.incendo.cloud.exception.InvalidSyntaxException;
 import org.incendo.cloud.exception.NoPermissionException;
 import org.incendo.cloud.exception.handling.ExceptionHandler;
+import org.incendo.cloud.execution.CommandExecutionHandler;
 import org.incendo.cloud.execution.ExecutionCoordinator;
 import org.incendo.cloud.minecraft.extras.MinecraftHelp;
 import org.incendo.cloud.paper.LegacyPaperCommandManager;
 import org.incendo.cloud.paper.PaperCommandManager;
 import org.incendo.cloud.parser.ParserRegistry;
+import org.incendo.cloud.parser.standard.IntegerParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.incendo.cloud.parser.standard.StringParser.greedyStringParser;
 
@@ -51,6 +68,47 @@ public class CommandManager {
         } else {
             LOGGER.warn("Brigadier is not supported on this server version."); // This should never happen since we use ASP, but just in case
         }
+
+
+        commandManager.command(commandManager.commandBuilder("test").required("count", IntegerParser.integerParser()).handler(commandContext -> {
+            int count = commandContext.get("count");
+            try {
+                SlimeWorld world = AdvancedSlimePaperAPI.instance().readWorld(SWPlugin.getInstance().getLoaderManager().getLoader("file"), "test2", false, new SlimePropertyMap());
+                List<Long> loadTimes = new ArrayList<>(count);
+                List<Long> unloadTimes = new ArrayList<>(count);
+                List<Long> chunkLoadTimes = new ArrayList<>(count);
+
+                for (int i = 0; i < count; i++) {
+                    long loadStart = System.currentTimeMillis();
+                    AdvancedSlimePaperAPI.instance().loadWorld(world, true);
+                    long loadEnd = System.currentTimeMillis();
+                    loadTimes.add(loadEnd - loadStart);
+
+                    World loaded = Bukkit.getWorld(world.getName());
+
+                    long chunkLoadStart = System.currentTimeMillis();
+                    for (SlimeChunk chunk : world.getChunkStorage()) {
+                        Chunk chunk1 = loaded.getChunkAt(chunk.getX(), chunk.getZ());
+                        chunk1.addPluginChunkTicket(plugin);
+                    }
+                    chunkLoadTimes.add(System.currentTimeMillis() - chunkLoadStart);
+
+                    long unloadStart = System.currentTimeMillis();
+                    Bukkit.unloadWorld(loaded, true);
+                    long unloadEnd = System.currentTimeMillis();
+                    unloadTimes.add(unloadEnd - unloadStart);
+                }
+
+                commandContext.sender().sendMessage("Load " + loadTimes.stream().map(Object::toString).collect(Collectors.joining(", ")));
+                commandContext.sender().sendMessage("Chunks " + chunkLoadTimes.stream().map(Object::toString).collect(Collectors.joining(", ")));
+                commandContext.sender().sendMessage("Unload " + unloadTimes.stream().map(Object::toString).collect(Collectors.joining(", ")));
+
+            } catch (UnknownWorldException | IOException | CorruptedWorldException | NewerFormatException e) {
+                throw new RuntimeException(e);
+            }
+
+
+        }));
 
         ParserRegistry<CommandSender> parserRegistry = commandManager.parserRegistry();
 
